@@ -7,3 +7,4 @@ pydub
 requests
 yt-dlp
 gtts
+Pillow
