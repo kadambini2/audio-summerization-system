@@ -1,8 +1,7 @@
 google-generativeai
 python-dotenv
-speechrecognition
-pyttsx3
-pyautogui
-pyaudio
-yt-dlp
+SpeechRecognition
+pydub
 requests
+yt-dlp
+gtts
