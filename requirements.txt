@@ -1,19 +1,8 @@
-# Core AI & voice
+streamlit
 google-generativeai
 python-dotenv
-speechrecognition
-pyttsx3
-pyaudio
-
-# Automation & utilities
-pyautogui
-yt-dlp
+SpeechRecognition
+pydub
 requests
-
-# Email handling
-smtplib   # built-in, no need to install separately
-email     # built-in, no need to install separately
-
-# Optional (for cloud/local deployment enhancements)
-flask      # if deploying as web app
-streamlit  # if using Streamlit interface
+yt-dlp
+gtts
