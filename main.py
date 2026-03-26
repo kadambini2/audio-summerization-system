@@ -15,88 +15,98 @@ from actions import (
 )
 from config import ASSISTANT_NAME
 
-speak(f"Hello. I am {ASSISTANT_NAME}. How can I help you today?")
+def safe_speak(text):
+    try:
+        speak(text)
+    except Exception as e:
+        print("TTS Error:", e)
+        print(text)
+
+safe_speak(f"Hello. I am {ASSISTANT_NAME}. How can I help you today?")
 
 while True:
-    mode = input("V = Voice | T = Text: ").lower()
-    command = listen() if mode == "v" else input("⌨️ You: ").lower()
+    try:
+        mode = input("V = Voice | T = Text: ").lower().strip()
 
-    if not command:
-        continue
-
-    if "exit" in command or "bye" in command:
-        speak("Goodbye. Have a nice day.")
-        break
-
-    # -------- IDENTITY --------
-    if "your name" in command or "who are you" in command:
-        speak(f"My name is {ASSISTANT_NAME}. I am your personal AI assistant.")
-        continue
-
-    # -------- TIME --------
-    if "time" in command or "what time is it" in command:
-        speak(get_current_time())
-        continue
-
-    # -------- WEATHER --------
-    if "weather" in command:
-        speak(get_weather_today())
-        continue
-
-    # -------- OPEN GITHUB --------
-    if "open" in command and "github" in command:
-        open_github()
-        speak("Opening GitHub.")
-        continue
-
-    # -------- GOOGLE SEARCH --------
-    if "search" in command or ("google" in command and "open" not in command):
-        query = parse_google_search(command)
-        if query:
-            google_search(query)
-            speak(f"Searching Google for {query}.")
+        if mode == "v":
+            try:
+                command = listen()
+            except Exception:
+                print("⚠️ Voice input not working. Switching to text.")
+                command = input("⌨️ You: ").lower()
         else:
-            speak("What would you like me to search for?")
-        continue
+            command = input("⌨️ You: ").lower()
 
-    # -------- OPEN GMAIL --------
-    if "open" in command and "gmail" in command:
-        open_gmail()
-        speak("Opening Gmail.")
-        continue
+        if not command:
+            continue
 
-    # -------- EMAIL --------
-    if "send" in command and "email" in command:
-        if parse_and_send_email(command):
-            speak("Email sent successfully.")
+        # EXIT
+        if any(x in command for x in ["exit", "bye", "quit"]):
+            safe_speak("Goodbye. Have a nice day.")
+            break
+
+        # IDENTITY
+        elif "your name" in command or "who are you" in command:
+            safe_speak(f"My name is {ASSISTANT_NAME}. I am your personal AI assistant.")
+
+        # TIME
+        elif "time" in command:
+            safe_speak(get_current_time())
+
+        # WEATHER
+        elif "weather" in command:
+            safe_speak(get_weather_today())
+
+        # GITHUB
+        elif "open github" in command:
+            open_github()
+            safe_speak("Opening GitHub.")
+
+        # GOOGLE SEARCH
+        elif "search" in command or ("google" in command and "open" not in command):
+            query = parse_google_search(command)
+            if query:
+                google_search(query)
+                safe_speak(f"Searching Google for {query}.")
+            else:
+                safe_speak("What would you like me to search for?")
+
+        # GMAIL
+        elif "open gmail" in command:
+            open_gmail()
+            safe_speak("Opening Gmail.")
+
+        # EMAIL
+        elif "send" in command and "email" in command:
+            if parse_and_send_email(command):
+                safe_speak("Email sent successfully.")
+            else:
+                safe_speak("Please say: send email containing your message to email address")
+
+        # WHATSAPP OPEN
+        elif "open whatsapp" in command:
+            open_whatsapp()
+            safe_speak("Opening WhatsApp.")
+
+        # WHATSAPP SEND
+        elif "whatsapp" in command and "to" in command:
+            if parse_and_send_whatsapp(command):
+                safe_speak("WhatsApp message sent.")
+            else:
+                safe_speak("Please say: send whatsapp message hi to mom")
+
+        # YOUTUBE
+        elif command.startswith("play"):
+            if parse_and_play_youtube(command):
+                safe_speak("Playing on YouTube.")
+            else:
+                safe_speak("I could not find the song.")
+
+        # AI (Gemini)
         else:
-            speak("Please say: send email containing your message to email address")
-        continue
+            reply = think(command)
+            safe_speak(reply)
 
-    # -------- WHATSAPP --------
-    # OPEN WHATSAPP
-    if "open whatsapp" in command:
-        speak("Opening WhatsApp.")
-        open_whatsapp()
-        continue
-
-    # SEND WHATSAPP MESSAGE
-    if "whatsapp" in command and "to" in command:
-        if parse_and_send_whatsapp(command):
-            speak("WhatsApp message sent.")
-        else:
-            speak("Please say: send whatsapp message hi to mom")
-        continue
-
-    # -------- YOUTUBE --------
-    if command.startswith("play"):
-        if parse_and_play_youtube(command):
-            speak("Playing on YouTube.")
-        else:
-            speak("I could not find the song.")
-        continue
-
-    # -------- CONVERSATIONAL AI (like Gemini) --------
-    # Let Gemini handle all other queries naturally
-    reply = think(command)
-    speak(reply)
+    except Exception as e:
+        print("❌ Error:", e)
+        safe_speak("Something went wrong. Please try again.")
