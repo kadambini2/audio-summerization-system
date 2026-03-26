@@ -7,10 +7,14 @@ from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 import smtplib
 from dotenv import load_dotenv
+import openai
 
 load_dotenv()
+
 EMAIL_ADDRESS = os.getenv("EMAIL_ADDRESS")
 EMAIL_PASSWORD = os.getenv("EMAIL_APP_PASSWORD")
+OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
+openai.api_key = OPENAI_API_KEY
 
 # ----------------- EMAIL -----------------
 def send_email_smtp(to_email, subject, body):
@@ -95,3 +99,17 @@ def parse_google_search(command):
             query = re.sub(r'\s+on google$', '', match.group(1).strip(), flags=re.IGNORECASE)
             return query
     return None
+
+# ----------------- AI FALLBACK -----------------
+def think(command):
+    if not OPENAI_API_KEY:
+        return "AI fallback unavailable. Please set your OpenAI API key."
+    try:
+        response = openai.ChatCompletion.create(
+            model="gpt-3.5-turbo",
+            messages=[{"role": "user", "content": command}],
+            max_tokens=150
+        )
+        return response.choices[0].message.content.strip()
+    except Exception as e:
+        return "Sorry, I cannot process that right now."
