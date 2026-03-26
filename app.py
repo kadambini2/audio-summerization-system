@@ -14,11 +14,14 @@ import os
 
 ASSISTANT_NAME = "Celeste"
 
-# ----------------- SIDEBAR WITH LARGER LOGO AND JUST PROJECT NAME -----------------
+# ----------------- SIDEBAR WITH LOGO, PROJECT NAME, AND DESCRIPTION -----------------
 with st.sidebar:
     logo = Image.open("logo.jpg")
-    st.image(logo, width=250)  # Increased width
-    st.markdown(f"### 🪐 {ASSISTANT_NAME} AI")  # Just project name below image
+    st.image(logo, width=250)  # Larger logo
+    st.markdown(f"### 🪐 {ASSISTANT_NAME} AI")  # Project name below logo
+    st.markdown("""
+    Celeste is an intelligent AI assistant powered by Google's Gemini AI that can perform various tasks through voice or text commands. From sending emails and WhatsApp messages to searching Google and engaging in natural conversations, Celeste makes your daily tasks easier!
+    """)
 
 st.markdown(f"# {ASSISTANT_NAME} - AI Assistant")
 
