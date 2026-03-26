@@ -1,4 +1,5 @@
 import streamlit as st
+from PIL import Image
 from actions import (
     parse_and_send_email,
     parse_and_play_youtube,
@@ -13,16 +14,24 @@ import os
 
 ASSISTANT_NAME = "Celeste"
 
-st.title(f"{ASSISTANT_NAME} - AI Assistant")
-st.write("Type a message below and I will respond:")
+# ----------------- LOGO AND DESCRIPTION -----------------
+logo = Image.open("logo.jpg")
+st.image(logo, width=150)
 
+st.markdown("""
+# 🪐 Celeste AI - Your Personal Voice Assistant
+
+Celeste is an intelligent AI assistant powered by Google's Gemini AI that can perform various tasks through voice or text commands. From sending emails and WhatsApp messages to searching Google and engaging in natural conversations, Celeste makes your daily tasks easier!
+""")
+
+# ----------------- USER INPUT -----------------
 command = st.text_input("You:")
 
 if command:
     command_lower = command.lower()
     response_text = ""
 
-    # -------- HARD-CODED SHORTCUTS --------
+    # -------- SHORTCUTS --------
     if "time" in command_lower:
         response_text = get_current_time()
     elif "weather" in command_lower:
@@ -33,7 +42,7 @@ if command:
             google_search(query)
             response_text = f"Searching Google for: {query}"
         else:
-            response_text = think(command)  # fallback
+            response_text = think(command)
     elif "send" in command_lower and "email" in command_lower:
         if parse_and_send_email(command):
             response_text = "Email sent successfully."
@@ -44,15 +53,15 @@ if command:
         if url:
             response_text = f"Playing on YouTube: {url}"
         else:
-            response_text = think(command)  # fallback
+            response_text = think(command)
     else:
         # -------- AI FALLBACK --------
         response_text = think(command)
 
-    # Display response
+    # ----------------- DISPLAY RESPONSE -----------------
     st.text_area(f"{ASSISTANT_NAME}:", value=response_text, height=150)
 
-    # Optional: speak response using gTTS
+    # ----------------- OPTIONAL TTS -----------------
     try:
         tts = gTTS(text=response_text, lang="en")
         tts_file = "response.mp3"
