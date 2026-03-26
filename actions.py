@@ -1,75 +1,122 @@
-import streamlit as st
-from PIL import Image
-from actions import (
-    parse_and_send_email,
-    parse_and_play_youtube,
-    get_weather_today,
-    get_current_time,
-    parse_google_search,
-    google_search,
-    think
-)
-from gtts import gTTS
+import re
 import os
+import requests
+import subprocess
+import webbrowser
+from email.mime.text import MIMEText
+from email.mime.multipart import MIMEMultipart
+import smtplib
+from dotenv import load_dotenv
 
-ASSISTANT_NAME = "Celeste"
+load_dotenv()
 
-# ----------------- SIDEBAR -----------------
-with st.sidebar:
-    logo = Image.open("logo.jpg")
-    st.image(logo, width=250)
-    st.markdown(f"### 🪐 {ASSISTANT_NAME} AI")
-    st.markdown("""
-    Celeste is an intelligent AI assistant powered by Google's Gemini AI that can perform various tasks through voice or text commands. 
-    From sending emails to searching Google and engaging in natural conversations, Celeste makes your daily tasks easier!
-    """)
+# ----------------- CONFIG -----------------
+GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
+EMAIL_ADDRESS = os.getenv("EMAIL_ADDRESS")
+EMAIL_PASSWORD = os.getenv("EMAIL_APP_PASSWORD")
 
-st.markdown(f"# {ASSISTANT_NAME} - AI Assistant")
-
-# ----------------- USER INPUT -----------------
-command = st.text_input("You:")
-
-if command:
-    command_lower = command.lower()
-    response_text = ""
-
-    # -------- SHORTCUTS --------
-    if "time" in command_lower:
-        response_text = get_current_time()
-    elif "weather" in command_lower:
-        response_text = get_weather_today()
-    elif "search" in command_lower or ("google" in command_lower and "open" not in command_lower):
-        query = parse_google_search(command)
-        if query:
-            google_search(query)
-            response_text = f"Searching Google for: {query}"
-        else:
-            response_text = think(command)
-    elif "send" in command_lower and "email" in command_lower:
-        if parse_and_send_email(command):
-            response_text = "Email sent successfully."
-        else:
-            response_text = "Failed to send email. Format: send email containing <message> to <email>"
-    elif command_lower.startswith("play"):
-        url = parse_and_play_youtube(command)
-        if url:
-            response_text = f"Playing on YouTube: {url}"
-        else:
-            response_text = think(command)
-    else:
-        # -------- AI FALLBACK --------
-        response_text = think(command)
-
-    # ----------------- DISPLAY RESPONSE -----------------
-    st.text_area(f"{ASSISTANT_NAME}:", value=response_text, height=150)
-
-    # ----------------- OPTIONAL TTS -----------------
+# ----------------- EMAIL -----------------
+def send_email_smtp(to_email, subject, body):
+    if not EMAIL_ADDRESS or not EMAIL_PASSWORD:
+        return False
+    msg = MIMEMultipart()
+    msg["From"] = EMAIL_ADDRESS
+    msg["To"] = to_email
+    msg["Subject"] = subject
+    msg.attach(MIMEText(body, "plain"))
     try:
-        tts = gTTS(text=response_text, lang="en")
-        tts_file = "response.mp3"
-        tts.save(tts_file)
-        audio_file = open(tts_file, "rb")
-        st.audio(audio_file.read(), format="audio/mp3")
-        os.remove(tts_file)
+        server = smtplib.SMTP("smtp.gmail.com", 587)
+        server.starttls()
+        server.login(EMAIL_ADDRESS, EMAIL_PASSWORD)
+        server.send_message(msg)
+        server.quit()
+        return True
+    except:
+        return False
+
+def parse_and_send_email(command):
+    pattern = r'send (?:an )?email containing (.+) to ([\w\.\-]+@[\w\.\-]+\.[a-zA-Z]{2,})'
+    match = re.search(pattern, command, re.IGNORECASE)
+    if match:
+        return send_email_smtp(match.group(2), "Message from AI Assistant", match.group(1))
+    return False
+
+# ----------------- YOUTUBE -----------------
+def get_first_youtube_watch_url(query):
+    result = subprocess.run(
+        ["yt-dlp", "--print", "webpage_url", f"ytsearch1:{query}"],
+        capture_output=True, text=True, shell=True
+    )
+    if result.returncode != 0: return None
+    return result.stdout.strip()
+
+def parse_and_play_youtube(command):
+    match = re.search(r'play (.+)', command)
+    if not match: return None
+    song = match.group(1).replace("on youtube", "").strip()
+    url = get_first_youtube_watch_url(song)
+    return url
+
+# ----------------- WEATHER -----------------
+def get_weather_today():
+    try:
+        loc = requests.get("https://ipapi.co/json/", timeout=3).json()
+        lat, lon, city = loc.get("latitude"), loc.get("longitude"), loc.get("city")
+        if not lat: lat, lon, city = 28.6139, 77.2090, "Delhi"
+        weather = requests.get(
+            f"https://api.open-meteo.com/v1/forecast?latitude={lat}&longitude={lon}&current_weather=true",
+            timeout=5
+        ).json()
+        current = weather.get("current_weather", {})
+        temp, wind = current.get("temperature", "N/A"), current.get("windspeed", "N/A")
+        return f"Today in {city}, temperature is {temp}°C with wind speed {wind} km/h."
+    except:
+        return "Sorry, could not fetch weather."
+
+# ----------------- TIME -----------------
+def get_current_time():
+    from datetime import datetime
+    now = datetime.now()
+    return now.strftime("The current time is %I:%M %p on %A, %B %d, %Y.")
+
+# ----------------- GOOGLE SEARCH -----------------
+def google_search(query):
+    import urllib.parse
+    search_url = f"https://www.google.com/search?q={urllib.parse.quote(query)}"
+    webbrowser.open(search_url)
+    return search_url
+
+def parse_google_search(command):
+    patterns = [
+        r'(?:google )?search (?:for )?(.+?)(?:\s+on google)?$',
+        r'google (.+)',
+        r'search (.+)'
+    ]
+    for pattern in patterns:
+        match = re.search(pattern, command, re.IGNORECASE)
+        if match:
+            query = re.sub(r'\s+on google$', '', match.group(1).strip(), flags=re.IGNORECASE)
+            return query
+    return None
+
+# ----------------- AI FALLBACK (Google Gemini) -----------------
+def think(command):
+    if not GEMINI_API_KEY:
+        return "AI fallback unavailable. Please set your Google Gemini API key in .env"
+
+    try:
+        url = "https://api.makersuite.google.com/v1/complete"  # Gemini endpoint
+        headers = {
+            "Authorization": f"Bearer {GEMINI_API_KEY}",
+            "Content-Type": "application/json"
+        }
+        payload = {
+            "prompt": command,
+            "max_output_tokens": 150
+        }
+        response = requests.post(url, headers=headers, json=payload, timeout=10)
+        response.raise_for_status()
+        data = response.json()
+        return data.get("output_text", "No response from Gemini.")
     except Exception as e:
-        st.warning(f"TTS Error: {e}")
+        return f"Sorry, Gemini AI could not process that. Error: {str(e)}"
