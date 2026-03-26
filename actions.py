@@ -7,14 +7,13 @@ from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 import smtplib
 from dotenv import load_dotenv
-import openai
 
 load_dotenv()
 
+# ----------------- CONFIG -----------------
+GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 EMAIL_ADDRESS = os.getenv("EMAIL_ADDRESS")
 EMAIL_PASSWORD = os.getenv("EMAIL_APP_PASSWORD")
-OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
-openai.api_key = OPENAI_API_KEY
 
 # ----------------- EMAIL -----------------
 def send_email_smtp(to_email, subject, body):
@@ -100,16 +99,24 @@ def parse_google_search(command):
             return query
     return None
 
-# ----------------- AI FALLBACK -----------------
+# ----------------- AI FALLBACK (Google Gemini) -----------------
 def think(command):
-    if not OPENAI_API_KEY:
-        return "AI fallback unavailable. Please set your OpenAI API key."
+    if not GEMINI_API_KEY:
+        return "AI fallback unavailable. Please set your Google Gemini API key in .env"
+
     try:
-        response = openai.ChatCompletion.create(
-            model="gpt-3.5-turbo",
-            messages=[{"role": "user", "content": command}],
-            max_tokens=150
-        )
-        return response.choices[0].message.content.strip()
-    except Exception:
-        return "Sorry, I cannot process that right now."
+        url = "https://api.makersuite.google.com/v1/complete"  # Gemini endpoint
+        headers = {
+            "Authorization": f"Bearer {GEMINI_API_KEY}",
+            "Content-Type": "application/json"
+        }
+        payload = {
+            "prompt": command,
+            "max_output_tokens": 150
+        }
+        response = requests.post(url, headers=headers, json=payload, timeout=10)
+        response.raise_for_status()
+        data = response.json()
+        return data.get("output_text", "No response from Gemini.")
+    except Exception as e:
+        return f"Sorry, Gemini AI could not process that. Error: {str(e)}"
