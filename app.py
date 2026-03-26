@@ -15,14 +15,20 @@ import os
 ASSISTANT_NAME = "Celeste"
 
 # ----------------- LOGO AND DESCRIPTION -----------------
-logo = Image.open("logo.jpg")
-st.image(logo, width=150)
+col1, col2 = st.columns([1, 3])  # left: logo, right: text
 
-st.markdown("""
-# 🪐 Celeste AI - Your Personal Voice Assistant
+with col1:
+    logo = Image.open("logo.jpg")
+    st.image(logo, width=150)
 
-Celeste is an intelligent AI assistant powered by Google's Gemini AI that can perform various tasks through voice or text commands. From sending emails and WhatsApp messages to searching Google and engaging in natural conversations, Celeste makes your daily tasks easier!
-""")
+with col2:
+    st.markdown(f"""
+    # 🪐 {ASSISTANT_NAME} AI - Your Personal Voice Assistant
+
+    Celeste is an intelligent AI assistant powered by Google's Gemini AI that can perform various tasks through voice or text commands. From sending emails and WhatsApp messages to searching Google and engaging in natural conversations, Celeste makes your daily tasks easier!
+    """)
+
+st.markdown("---")  # separator
 
 # ----------------- USER INPUT -----------------
 command = st.text_input("You:")
