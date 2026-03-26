@@ -39,7 +39,7 @@ def parse_and_send_email(command):
     pattern = r'send (?:an )?email containing (.+) to ([\w\.\-]+@[\w\.\-]+\.[a-zA-Z]{2,})'
     match = re.search(pattern, command, re.IGNORECASE)
     if match:
-        return send_email_smtp(match.group(2), "Message from Celeste", match.group(1))
+        return send_email_smtp(match.group(2), "Message from AI Assistant", match.group(1))
     return False
 
 # ----------------- YOUTUBE -----------------
@@ -111,5 +111,5 @@ def think(command):
             max_tokens=150
         )
         return response.choices[0].message.content.strip()
-    except Exception as e:
+    except Exception:
         return "Sorry, I cannot process that right now."
